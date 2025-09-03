@@ -1,0 +1,189 @@
+# Logarithmic_Caliculator
+#This caliculator is also useful to caliculate Logarithm(log and ln) values
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculator</title>
+  <style>
+    :root{
+      --bg:#0b1220;--panel:#111827;--key:#1f2937;--key-op:#374151;--accent:#60a5fa;--text:#e5e7eb;--muted:#9ca3af;--danger:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(1000px 600px at 100% 0,#1f2a44,transparent),#0b1220;color:var(--text);font:600 16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu}
+    .wrap{max-width:420px;margin:40px auto;padding:16px}
+    .title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-weight:800;letter-spacing:.3px}
+
+    .calc{background:linear-gradient(180deg,#111827,#0f172a);border:1px solid #1f2937;border-radius:18px;box-shadow:0 15px 35px rgba(0,0,0,.35);overflow:hidden}
+    .display{padding:16px 16px 10px}
+    .sub{height:20px;color:var(--muted);font:600 12px/1.2 ui-monospace,SFMono-Regular,Menlo,Monaco;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .screen{width:100%;background:transparent;border:none;color:var(--text);font:800 32px/1.2 ui-monospace,SFMono-Regular,Menlo,Monaco;text-align:right;outline:none}
+
+    .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px;background:rgba(255,255,255,.02);border-top:1px solid #1f2937}
+    button.key{appearance:none;border:none;border-radius:14px;padding:14px 10px;cursor:pointer;background:var(--key);color:var(--text);font-weight:800;letter-spacing:.4px;box-shadow:0 4px 0 rgba(0,0,0,.25);transition:.12s transform,.12s filter}
+    button.key:hover{filter:brightness(1.06)}
+    button.key:active{transform:translateY(2px)}
+    .op{background:var(--key-op)}
+    .eq{background:linear-gradient(180deg,#60a5fa,#3b82f6);color:#051a36}
+    .danger{background:linear-gradient(180deg,#b91c1c,#991b1b)}
+    .wide{grid-column:span 2}
+
+    @media (max-width:440px){.screen{font-size:28px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">
+      <div>Calculator</div>
+      <div style="font-size:12px;color:var(--muted);">Keyboard friendly</div>
+    </div>
+
+    <div class="calc" role="application" aria-label="Basic calculator">
+      <div class="display">
+        <div id="sub" class="sub" aria-live="polite">&nbsp;</div>
+        <input id="screen" class="screen" placeholder="0" autocomplete="off" aria-label="Expression" />
+      </div>
+
+      <div class="keys" id="keys">
+        <button class="key danger" data-action="ac" aria-label="All Clear">AC</button>
+        <button class="key" data-action="back" aria-label="Backspace">⌫</button>
+        <button class="key" data-action="sign" aria-label="Toggle sign">±</button>
+        <button class="key op" data-value="/" aria-label="Divide">÷</button>
+
+        <button class="key" data-value="7">7</button>
+        <button class="key" data-value="8">8</button>
+        <button class="key" data-value="9">9</button>
+        <button class="key op" data-value="*" aria-label="Multiply">×</button>
+
+        <button class="key" data-value="4">4</button>
+        <button class="key" data-value="5">5</button>
+        <button class="key" data-value="6">6</button>
+        <button class="key op" data-value="-" aria-label="Minus">−</button>
+
+        <button class="key" data-value="1">1</button>
+        <button class="key" data-value="2">2</button>
+        <button class="key" data-value="3">3</button>
+        <button class="key op" data-value="+" aria-label="Plus">+</button>
+
+        <button class="key wide" data-value="0">0</button>
+        <button class="key" data-value=".">.</button>
+        <button class="key eq" data-action="equals" aria-label="Equals">=</button>
+
+        <button class="key wide" data-value="(">(</button>
+        <button class="key wide" data-value=")">)</button>
+        <button class="key" data-value="%">%</button>
+        <button class="key" data-action="ce" aria-label="Clear entry">CE</button>
+
+        <!-- 🔹 Added log buttons -->
+        <button class="key wide" data-value="log(">log</button>
+        <button class="key wide" data-value="ln(">ln</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const screen = document.getElementById('screen');
+    const sub = document.getElementById('sub');
+    const keys = document.getElementById('keys');
+    let ans = 0;
+
+    function insert(text){
+      const start = screen.selectionStart ?? screen.value.length;
+      const end   = screen.selectionEnd ?? screen.value.length;
+      screen.value = screen.value.slice(0,start) + text + screen.value.slice(end);
+      const pos = start + text.length; screen.setSelectionRange(pos,pos); screen.focus();
+    }
+
+    function backspace(){
+      const s = screen.value; const start = screen.selectionStart ?? s.length; const end = screen.selectionEnd ?? s.length;
+      if(start !== end){ screen.value = s.slice(0,start) + s.slice(end); screen.setSelectionRange(start,start); }
+      else if(start>0){ screen.value = s.slice(0,start-1) + s.slice(start); screen.setSelectionRange(start-1,start-1); }
+      screen.focus();
+    }
+
+    function sanitize(input){
+      let expr = input.trim();
+      if(!expr) return '';
+      // Map pretty operators to JS
+      expr = expr.replace(/[×]/g,'*').replace(/[÷]/g,'/');
+      // Percent: 50% -> (50/100)
+      expr = expr.replace(/(\d+(?:\.\d+)?)%/g,'($1/100)');
+
+      // 🔹 Add log replacements
+      expr = expr.replace(/log\(/g,'Math.log10('); // base 10
+      expr = expr.replace(/ln\(/g,'Math.log(');    // natural log
+
+      // Allowed characters only
+      const allowed = /^[0-9+\-*/().,%\sMathlog]*$/;
+      if(!allowed.test(expr)) throw new Error('Invalid characters');
+      return expr;
+    }
+
+    function evaluate(){
+      const raw = screen.value.trim();
+      if(!raw){ sub.textContent=''; return; }
+      try{
+        const expr = sanitize(raw);
+        if(!expr){ screen.value=''; sub.textContent=''; return; }
+        const out = Function('"use strict"; return ('+expr+')')();
+        const result = (typeof out === 'number' && Number.isFinite(out)) ? +parseFloat(out.toPrecision(12)) : out;
+        sub.textContent = raw + ' =';
+        screen.value = String(result);
+        ans = result;
+      }catch(err){
+        sub.textContent = err.message || 'Error';
+        flash();
+      }
+    }
+
+    function flash(){
+      sub.style.color='var(--danger)'; setTimeout(()=>sub.style.color='var(--muted)',600);
+    }
+
+    function toggleSign(){
+      const s = screen.value; if(!s) { insert('-'); return; }
+      const pos = screen.selectionStart ?? s.length;
+      const left = s.slice(0,pos);
+      const m = left.match(/([+\-*/(]|^)(\s*)(-?\d*(?:\.\d+)?)$/);
+      if(!m){ insert('(-'); insert(')'); return; }
+      const start = left.lastIndexOf(m[0]);
+      const sign = m[3].startsWith('-') ? '' : '-';
+      const replaced = s.slice(0,start) + m[1] + m[2] + sign + m[3].replace(/^-/,'') + s.slice(pos);
+      screen.value = replaced; const newPos = start + (m[1]+m[2]+sign+m[3].replace(/^-/, '')).length; screen.setSelectionRange(newPos,newPos);
+    }
+
+    // Clicks
+    keys.addEventListener('click', e => {
+      const b = e.target.closest('button'); if(!b) return;
+      const action = b.getAttribute('data-action');
+      const val = b.getAttribute('data-value');
+      if(action === 'ac'){ screen.value=''; sub.textContent=''; return; }
+      if(action === 'ce'){ screen.value=''; return; }
+      if(action === 'back'){ backspace(); return; }
+      if(action === 'sign'){ toggleSign(); return; }
+      if(action === 'equals'){ evaluate(); return; }
+      if(val != null){ insert(val); return; }
+    });
+
+    // Keyboard
+    document.addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ e.preventDefault(); evaluate(); return; }
+      if(e.key === 'Backspace'){ return; }
+      if(e.key === 'Escape'){ screen.value=''; sub.textContent=''; return; }
+    });
+
+    screen.addEventListener('input', () => {
+      const before = screen.value;
+      const filtered = before.replace(/[^0-9+\-*/().,%\sA-Za-z]/g,''); // allow letters for log, ln
+      if(before !== filtered){ screen.value = filtered; flash(); }
+    });
+
+    screen.addEventListener('focus',()=>{ const len=screen.value.length; screen.setSelectionRange(len,len); });
+
+    screen.placeholder = 'Try: log(100), ln(2)';
+  })();
+  </script>
+</body>
+</html>
